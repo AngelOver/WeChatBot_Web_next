@@ -664,7 +664,7 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
               <h2 className="text-lg font-bold text-center text-[var(--theme-text-primary)] mb-3 flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5 text-[var(--theme-primary)]" />
                 WeChatBot Web 模拟器
-                <a href="https://github.com/AngelOver/WeChatBot_Web" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-gray-900 hover:text-gray-600 transition-colors">
+                <a href="https://github.com/onebai123/WeChatBot_Web" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-gray-900 hover:text-gray-600 transition-colors">
                   <Github className="w-5 h-5" />
                 </a>
               </h2>

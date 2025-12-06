@@ -149,7 +149,7 @@ export function Sidebar({ onSelectChat, onOpenSettings, onOpenPersona, onAddPers
           <div className="flex-1">
             <div className="text-sm font-bold text-[var(--theme-text-primary)]">微信-AI模拟器</div>
             <div className="text-xs text-[var(--theme-text-muted)]">Star on <a 
-              href="https://github.com/AngelOver/WeChatBot_Web" 
+              href="https://github.com/onebai123/WeChatBot_Web" 
               target="_blank" 
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}

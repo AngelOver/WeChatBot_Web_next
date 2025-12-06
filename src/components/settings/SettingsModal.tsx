@@ -122,7 +122,7 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
           {/* 底部版本信息 */}
           <div className="pt-4 border-t border-[var(--theme-border)] space-y-2">
             <a 
-              href="https://github.com/AngelOver/WeChatBot_Web" 
+              href="https://github.com/onebai123/WeChatBot_Web" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors"

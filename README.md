@@ -1,2 +1,103 @@
-# WeChatBot_Web
-AI虚拟伙伴Web版
+# WeChatBot Web 模拟器 (Next.js 版)
+
+基于 AI 的微信聊天模拟器，支持角色扮演和智能记忆管理。
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/onebai123/WeChatBot_Web)
+
+## ✨ 功能特点
+
+- 🎭 **角色扮演** - 内置多个人设模板，支持自定义角色
+- 🧠 **智能记忆** - 自动整理对话记忆，长期对话不丢失上下文
+- 💬 **微信体验** - 仿微信 UI，支持拍一拍、撤回等互动
+- 🔐 **隐私优先** - 所有数据存储在浏览器本地，不上传服务器
+- 📱 **响应式设计** - 支持桌面和移动端
+
+## 🔧 技术栈
+
+- **框架**: Next.js 14 + React 18
+- **状态管理**: Zustand
+- **样式**: Tailwind CSS
+- **图标**: Lucide React
+- **AI 接口**: 支持 OpenAI 兼容接口（DeepSeek、GPT 等）
+
+## 🚀 快速开始
+
+### 安装依赖
+
+```bash
+npm install
+# 或
+pnpm install
+```
+
+### 启动开发服务器
+
+```bash
+npm run dev
+```
+
+打开 [http://localhost:3000](http://localhost:3000) 查看应用。
+
+### 构建生产版本
+
+```bash
+npm run build
+npm start
+```
+
+## 📁 项目结构
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── globals.css        # 全局样式
+│   ├── layout.tsx         # 根布局
+│   └── page.tsx           # 主页面
+├── components/             # React 组件
+│   ├── chat/              # 聊天相关组件
+│   │   ├── ChatContainer.tsx   # 聊天容器
+│   │   ├── ChatHeader.tsx      # 聊天头部
+│   │   ├── ChatInput.tsx       # 输入框
+│   │   └── MessageBubble.tsx   # 消息气泡
+│   ├── layout/            # 布局组件
+│   │   └── Sidebar.tsx         # 侧边栏
+│   ├── persona/           # 人设组件
+│   │   └── PersonaDrawer.tsx   # 人设抽屉
+│   └── settings/          # 设置组件
+│       └── SettingsModal.tsx   # 设置弹窗
+├── store/                  # Zustand 状态管理
+│   ├── chatStore.ts       # 聊天状态
+│   ├── configStore.ts     # 配置状态
+│   └── personaStore.ts    # 人设状态
+├── lib/                    # 工具库
+│   ├── api.ts             # API 请求
+│   └── utils.ts           # 工具函数
+└── types/                  # TypeScript 类型
+    └── index.ts           # 类型定义
+```
+
+## 🎯 使用指南
+
+1. **配置 API**
+   - 点击右上角设置按钮
+   - 填写 API Base URL 和 API Key
+   - 支持 OpenAI、DeepSeek 等兼容接口
+
+2. **选择人设**
+   - 点击聊天头部的人设按钮
+   - 选择内置人设或创建自定义人设
+   - 人设定义了 AI 的性格和说话风格
+
+3. **开始对话**
+   - 在输入框输入消息
+   - 按回车或点击发送按钮
+   - 支持拍一拍、撤回等互动
+
+## 🎭 人设功能
+
+人设使用 Markdown 格式的系统提示词，支持以下特殊指令：
+
+- `[tickle]` - 拍一拍对方
+- `[recall]` - 撤回上一条消息
+- 使用 `\\` 分隔多条消息
+
