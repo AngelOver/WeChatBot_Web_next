@@ -686,7 +686,7 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
               </div>
               <div className="mt-4 pt-3 border-t border-[var(--theme-border)] flex flex-wrap justify-center gap-3 text-xs items-center">
                 <span className="text-green-600">🌐 开源项目</span>
-                <a href="https://ai.feishu.cn/wiki/CRWqw3VdTinXxSkCK4ZccyQKnXf" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-orange-500 hover:underline">
+                <a href="https://ai.feishu.cn/wiki/DDh6waPHoiHd7WkvQqOclLNUn34" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-orange-500 hover:underline">
                   <Rocket className="w-3 h-3" /> 一键部署
                 </a>
                 <span className="text-blue-600">📱 可打包 APP</span>

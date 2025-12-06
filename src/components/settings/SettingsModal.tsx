@@ -319,7 +319,7 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
                     <p className="text-xs text-green-600 mt-0.5">推荐使用 WeAPIs，支持多种模型</p>
                   </div>
                   <a
-                    href="https://ai.feishu.cn/wiki/CRWqw3VdTinXxSkCK4ZccyQKnXf"
+                    href="https://ai.feishu.cn/wiki/DDh6waPHoiHd7WkvQqOclLNUn34"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg transition-colors"

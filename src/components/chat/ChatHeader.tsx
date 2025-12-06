@@ -70,7 +70,7 @@ export function ChatHeader({
               <div className="w-10 h-1 bg-[var(--theme-border)] rounded-full mx-auto mb-4" />
               <div className="grid grid-cols-4 gap-4">
                 {/* 1. 教程 */}
-                <button onClick={() => { window.open('https://ai.feishu.cn/wiki/CRWqw3VdTinXxSkCK4ZccyQKnXf', '_blank'); setShowMore(false); }}
+                <button onClick={() => { window.open('https://ai.feishu.cn/wiki/DDh6waPHoiHd7WkvQqOclLNUn34', '_blank'); setShowMore(false); }}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-[var(--theme-border)]/50 active:bg-[var(--theme-border)]">
                   <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center">
                     <HelpCircle className="w-6 h-6 text-white" />
@@ -196,7 +196,7 @@ export function ChatHeader({
             </button>
           )}
           <button 
-            onClick={() => window.open('https://ai.feishu.cn/wiki/CRWqw3VdTinXxSkCK4ZccyQKnXf', '_blank')}
+            onClick={() => window.open('https://ai.feishu.cn/wiki/DDh6waPHoiHd7WkvQqOclLNUn34', '_blank')}
             className="flex flex-col items-center px-2 py-1 hover:bg-[var(--theme-border)]/50 rounded"
           >
             <HelpCircle className="w-4 h-4 text-[var(--theme-text-secondary)]" />
