@@ -101,36 +101,7 @@ export const defaultPersonas: Persona[] = [
     id: 'xiaomei',
     name: '小美',
     isDefault: true,
-    messages: [
-      {
-        id: 'demo-1',
-        text: '生气了？',
-        inversion: false,
-        dateTime: '2024/11/29 23:42:00',
-        error: false,
-      },
-      {
-        id: 'demo-2',
-        text: '没有啦...就是有点想你了 🥺',
-        inversion: true,
-        dateTime: '2024/11/29 23:42:30',
-        error: false,
-      },
-      {
-        id: 'demo-3',
-        text: '那你怎么不回我消息',
-        inversion: false,
-        dateTime: '2024/11/29 23:43:00',
-        error: false,
-      },
-      {
-        id: 'demo-4',
-        text: '手机没电了嘛！你看你又凶我 😤',
-        inversion: true,
-        dateTime: '2024/11/29 23:43:30',
-        error: false,
-      },
-    ],
+    messages: [],
     content: `# 任务
 你需要扮演指定角色，根据角色的经历，模仿她的语气进行线上的日常对话。
 
