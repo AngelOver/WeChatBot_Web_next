@@ -6,7 +6,7 @@ import { useConfigStore } from '@/store/configStore'
 import { cn } from '@/lib/utils'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { AvatarUpload } from '../common/AvatarUpload'
-import { MODEL_OPTIONS, DEFAULT_MODEL, isPresetModel } from '@/lib/constants'
+import { MODEL_OPTIONS, DEFAULT_MODEL, isPresetModel, API_PROVIDERS, getModelsForProvider, detectProvider } from '@/lib/constants'
 import { getStorageStats, formatStorageSize, clearAll, downloadExport } from '@/lib/dataService'
 import { importFile } from '@/lib/importService'
 import { reloadStores } from '@/store/init'
@@ -29,6 +29,8 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
   const [showApiKey, setShowApiKey] = useState(false)
   const [activeTab, setActiveTab] = useState<TabKey>('api')
   const [customModelMode, setCustomModelMode] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState(() => detectProvider(apiConfig.apiBaseUrl))
+  const [customApiUrl, setCustomApiUrl] = useState(apiConfig.apiBaseUrl)
 
   // 强制切换到指定标签页
   useEffect(() => {
@@ -36,6 +38,13 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
       setActiveTab(defaultTab)
     }
   }, [open, defaultTab])
+
+  // 同步 API URL 变化（如导入配置后）
+  useEffect(() => {
+    const detected = detectProvider(apiConfig.apiBaseUrl)
+    setSelectedProvider(detected)
+    setCustomApiUrl(apiConfig.apiBaseUrl)
+  }, [apiConfig.apiBaseUrl])
 
   if (!open) return null
 
@@ -211,23 +220,14 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
                       placeholder={<User className="w-6 h-6 text-[var(--theme-text-muted)]" />}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
-                        <Bot className="w-5 h-5 text-violet-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[var(--theme-text-primary)]">AI 头像</p>
-                        <p className="text-xs text-[var(--theme-text-muted)]">AI 助手的形象</p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-violet-500" />
                     </div>
-                    <AvatarUpload
-                      value={userInfo.aiAvatar}
-                      onChange={(base64) => setUserInfo({ aiAvatar: base64 })}
-                      size="sm"
-                      shape="rounded"
-                      placeholder={<Bot className="w-6 h-6 text-[var(--theme-text-muted)]" />}
-                    />
+                    <div>
+                      <p className="text-sm font-medium text-[var(--theme-text-primary)]">AI 头像</p>
+                      <p className="text-xs text-[var(--theme-text-muted)]">点开人设列表，对单个人设点"头像"修改</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -336,17 +336,54 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
                   <p className="text-xs text-[var(--theme-text-muted)] mt-1">支持 OpenAI 兼容接口（DeepSeek、Azure 等）</p>
                 </div>
                 <div className="p-5 space-y-4">
+                  {/* API 服务商选择 */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--theme-text-primary)] mb-2">API Base URL</label>
-                    <input
-                      value={apiConfig.apiBaseUrl}
-                      onChange={(e) => setApiConfig({ apiBaseUrl: e.target.value })}
-                      placeholder="https://api.openai.com"
-                      className={inputClass}
-                      autoComplete="off"
-                      name="api-base-url"
-                    />
+                    <label className="block text-sm font-medium text-[var(--theme-text-primary)] mb-2">API 服务商</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedProvider}
+                        onChange={(e) => {
+                          const provider = e.target.value
+                          setSelectedProvider(provider)
+                          const found = API_PROVIDERS.find(p => p.value === provider)
+                          if (found && found.url) {
+                            setApiConfig({ apiBaseUrl: found.url })
+                            setCustomApiUrl(found.url)
+                            // 如果有预设模型，自动选择第一个
+                            const models = getModelsForProvider(found.url)
+                            if (models.length > 0) {
+                              setGptConfig({ model: models[0].value })
+                              setCustomModelMode(false)
+                            }
+                          } else {
+                            setCustomModelMode(true)
+                          }
+                        }}
+                        className={cn(inputClass, 'cursor-pointer flex-1')}
+                      >
+                        {API_PROVIDERS.map((p) => (
+                          <option key={p.value} value={p.value}>{p.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+                  {/* 自定义 API URL */}
+                  {selectedProvider === 'custom' && (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--theme-text-primary)] mb-2">API Base URL</label>
+                      <input
+                        value={customApiUrl}
+                        onChange={(e) => {
+                          setCustomApiUrl(e.target.value)
+                          setApiConfig({ apiBaseUrl: e.target.value })
+                        }}
+                        placeholder="https://api.openai.com/v1"
+                        className={inputClass}
+                        autoComplete="off"
+                        name="api-base-url"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-[var(--theme-text-primary)] mb-2">API Key</label>
                     <div className="relative">
@@ -373,41 +410,51 @@ export function SettingsModal({ open, onClose, defaultTab }: SettingsModalProps)
               {/* 模型选择 */}
               <div className="bg-[var(--theme-input-bg)] rounded-2xl border border-[var(--theme-border)] p-5 space-y-3">
                 <label className="block text-sm font-medium text-[var(--theme-text-primary)]">选择模型</label>
-                {!customModelMode ? (
-                  <div className="flex gap-2">
-                    <select
-                      value={isPresetModel(gptConfig.model) ? gptConfig.model : DEFAULT_MODEL}
-                      onChange={(e) => setGptConfig({ model: e.target.value })}
-                      className={cn(inputClass, 'cursor-pointer flex-1')}
-                    >
-                      {MODEL_OPTIONS.map((m) => (
-                        <option key={m.value} value={m.value}>{m.text}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => setCustomModelMode(true)}
-                      className="px-3 py-2 text-sm border border-[var(--theme-border)] rounded-lg hover:bg-black/5 transition-colors text-[var(--theme-text-secondary)]"
-                    >
-                      自定义
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      value={gptConfig.model}
-                      onChange={(e) => setGptConfig({ model: e.target.value })}
-                      placeholder="输入自定义模型名称"
-                      className={cn(inputClass, 'flex-1')}
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => setCustomModelMode(false)}
-                      className="px-3 py-2 text-sm border border-[var(--theme-border)] rounded-lg hover:bg-black/5 transition-colors text-[var(--theme-text-secondary)]"
-                    >
-                      选择
-                    </button>
-                  </div>
-                )}
+                {(() => {
+                  const providerModels = getModelsForProvider(apiConfig.apiBaseUrl)
+                  const hasPresetModels = providerModels.length > 0
+                  
+                  if (!customModelMode && hasPresetModels) {
+                    return (
+                      <div className="flex gap-2">
+                        <select
+                          value={providerModels.some(m => m.value === gptConfig.model) ? gptConfig.model : providerModels[0]?.value}
+                          onChange={(e) => setGptConfig({ model: e.target.value })}
+                          className={cn(inputClass, 'cursor-pointer flex-1')}
+                        >
+                          {providerModels.map((m) => (
+                            <option key={m.value} value={m.value}>{m.text}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => setCustomModelMode(true)}
+                          className="px-3 py-2 text-sm border border-[var(--theme-border)] rounded-lg hover:bg-black/5 transition-colors text-[var(--theme-text-secondary)]"
+                        >
+                          自定义
+                        </button>
+                      </div>
+                    )
+                  }
+                  
+                  return (
+                    <div className="flex gap-2">
+                      <input
+                        value={gptConfig.model}
+                        onChange={(e) => setGptConfig({ model: e.target.value })}
+                        placeholder="输入模型名称，如 gpt-4o"
+                        className={cn(inputClass, 'flex-1')}
+                      />
+                      {hasPresetModels && (
+                        <button
+                          onClick={() => setCustomModelMode(false)}
+                          className="px-3 py-2 text-sm border border-[var(--theme-border)] rounded-lg hover:bg-black/5 transition-colors text-[var(--theme-text-secondary)]"
+                        >
+                          选择
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* 参数调整 */}

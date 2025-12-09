@@ -68,9 +68,10 @@ interface MessageBubbleProps {
   message: Message
   personaId: string
   onTickle?: (target: 'ai' | 'user') => void
+  onClearMemory?: () => void
 }
 
-export function MessageBubble({ message, personaId, onTickle }: MessageBubbleProps) {
+export function MessageBubble({ message, personaId, onTickle, onClearMemory }: MessageBubbleProps) {
   const { recallMessage, personas } = usePersonaStore()
   const { userInfo } = useConfigStore()
   const { theme } = useThemeStore()
@@ -246,6 +247,17 @@ export function MessageBubble({ message, personaId, onTickle }: MessageBubblePro
             {message.text && message.text !== '[表情]' && message.text !== '请看这张图片' && (
               <div className="text-[17px] leading-[1.4] whitespace-pre-wrap break-words">
                 {renderText(message.text)}
+              </div>
+            )}
+            {/* API 错误提示 */}
+            {message.error && onClearMemory && (
+              <div className="mt-2 pt-2 border-t border-black/5">
+                <button
+                  onClick={onClearMemory}
+                  className="text-xs text-black/30 hover:text-black/50 underline underline-offset-2"
+                >
+                  报错无法解决？点击清理记忆
+                </button>
               </div>
             )}
           </div>

@@ -24,6 +24,7 @@ interface MemoryState {
   // 临时记忆操作
   addTempLog: (personaId: string, log: Omit<TempMemoryLog, 'timestamp'>) => void
   getTempLogs: (personaId: string) => TempMemoryLog[]
+  deleteTempLog: (personaId: string, index: number) => void
   clearTempLogs: (personaId: string) => void
   
   // 评分计算
@@ -98,6 +99,20 @@ export const useMemoryStore = create<MemoryState>()((set, get) => ({
   },
 
   getTempLogs: (personaId) => get().tempMemories[personaId]?.logs || [],
+
+  deleteTempLog: (personaId, index) => {
+    set((state) => {
+      const existing = state.tempMemories[personaId]
+      if (!existing) return state
+      const logs = existing.logs.filter((_, i) => i !== index)
+      return {
+        tempMemories: {
+          ...state.tempMemories,
+          [personaId]: { ...existing, logs, lastUpdated: new Date().toISOString() }
+        }
+      }
+    })
+  },
 
   clearTempLogs: (personaId) => {
     set((state) => {

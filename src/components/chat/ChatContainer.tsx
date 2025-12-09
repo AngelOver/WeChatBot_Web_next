@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import { usePersonaStore } from '@/store/personaStore'
 import { useMemoryStore } from '@/store/memoryStore'
+import { useThemeStore } from '@/store/themeStore'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
 import { ChatHeader } from './ChatHeader'
@@ -31,13 +32,14 @@ interface ChatContainerProps {
 export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatContainerProps) {
   const { 
     gptConfig, apiConfig, userInfo,
-    autoMessageConfig, quietTimeConfig, visionConfig, onlineSearchConfig, emojiConfig 
+    autoMessageConfig, quietTimeConfig, visionConfig, onlineSearchConfig, emojiConfig,
+    setAutoMessageConfig
   } = useConfigStore()
   const { 
     personas, activePersonaId, setActive,
     addMessage, updateMessage, recallMessage, clearMessages 
   } = usePersonaStore()
-  const { addTempLog, addCoreMemory, clearTempLogs, getTopCoreMemories } = useMemoryStore()
+  const { addTempLog, addCoreMemory, clearTempLogs, getTopCoreMemories, getCoreMemoriesByPersonaId, deleteCoreMemory } = useMemoryStore()
   
   const [loading, setLoading] = useState(false)
   const [showPersona, setShowPersona] = useState(false)
@@ -46,6 +48,8 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
   const [showImport, setShowImport] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
+  const [showClearMenu, setShowClearMenu] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -110,8 +114,73 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
     scrollToBottom()
   }, [messages])
 
+  // 快捷指令处理
+  const handleCommand = (cmd: string): boolean => {
+    const commands: Record<string, () => void> = {
+      // 清理类
+      '/cl': () => { clearTempLogs(activePersonaId!); showToast('已清理临时记忆') },
+      '/清理临时': () => { clearTempLogs(activePersonaId!); showToast('已清理临时记忆') },
+      '/清屏': () => { clearMessages(activePersonaId!); showToast('已清屏') },
+      '/cls': () => { clearMessages(activePersonaId!); showToast('已清屏') },
+      '/清理核心': () => { 
+        const memories = getCoreMemoriesByPersonaId(activePersonaId!)
+        memories.forEach(m => deleteCoreMemory(m.id))
+        showToast(`已清理 ${memories.length} 条核心记忆`) 
+      },
+      
+      // 主动消息
+      '/ea': () => { setAutoMessageConfig({ enabled: true }); showToast('已开启主动消息') },
+      '/开启主动': () => { setAutoMessageConfig({ enabled: true }); showToast('已开启主动消息') },
+      '/da': () => { setAutoMessageConfig({ enabled: false }); showToast('已关闭主动消息') },
+      '/关闭主动': () => { setAutoMessageConfig({ enabled: false }); showToast('已关闭主动消息') },
+      
+      // 界面
+      '/设置': () => setShowSettings(true),
+      '/set': () => setShowSettings(true),
+      '/人设': () => setShowPersona(true),
+      '/p': () => setShowPersona(true),
+      '/导入': () => setShowImport(true),
+      '/导出': () => setShowExport(true),
+      '/日志': () => setShowLogs(true),
+      '/log': () => setShowLogs(true),
+      
+      // 主题
+      '/手机模式': () => { useConfigStore.getState().setPhoneMode(true); showToast('已切换手机模式') },
+      '/电脑模式': () => { useConfigStore.getState().setPhoneMode(false); showToast('已切换电脑模式') },
+      '/微信': () => { useThemeStore.getState().setTheme('wechat'); showToast('已切换微信主题') },
+      '/qq': () => { useThemeStore.getState().setTheme('qq'); showToast('已切换QQ主题') },
+      '/imessage': () => { useThemeStore.getState().setTheme('imessage'); showToast('已切换iMessage主题') },
+      '/discord': () => { useThemeStore.getState().setTheme('discord'); showToast('已切换Discord主题') },
+      '/telegram': () => { useThemeStore.getState().setTheme('telegram'); showToast('已切换Telegram主题') },
+      
+      // 帮助
+      '/help': () => showHelpDialog(),
+      '/帮助': () => showHelpDialog(),
+      '/h': () => showHelpDialog(),
+    }
+    
+    const handler = commands[cmd]
+    if (handler) {
+      handler()
+      return true
+    }
+    return false
+  }
+  
+  // 帮助弹窗
+  const showHelpDialog = () => {
+    setShowHelp(true)
+  }
+
   const handleSend = async (text: string, imageBase64?: string) => {
-    if (!activePersonaId || loading) return
+    if (!activePersonaId) return
+
+    // 快捷指令处理
+    const cmd = text.trim().toLowerCase()
+    if (cmd.startsWith('/')) {
+      const handled = handleCommand(cmd)
+      if (handled) return
+    }
 
     // 检查 API Key，未配置时弹出设置并强制打开 API 标签页
     if (!apiConfig.apiKey) {
@@ -175,8 +244,9 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
     try {
       let userContent = text
       
-      // 图片识别
-      if (imageBase64 && visionConfig.enabled) {
+      // 图片识别（仅对真正的 base64 图片，排除表情路径如 /emojis/xxx.gif）
+      const isRealImage = imageBase64 && imageBase64.startsWith('data:')
+      if (isRealImage && visionConfig.enabled) {
         showToast('正在识别图片...')
         const imageDescription = await recognizeImage({
           imageBase64,
@@ -541,12 +611,47 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
     }
   }
 
-  // 清理当前角色记忆（聊天记录）
-  const handleClearMemory = () => {
+  // 清屏 - 清除聊天记录
+  const handleClearScreen = () => {
     if (!activePersonaId) return
-    if (confirm('确定要清理当前角色的所有聊天记录吗？此操作不可恢复！')) {
+    if (confirm('确定要清除当前聊天记录吗？')) {
       clearMessages(activePersonaId)
-      showToast('聊天记录已清理')
+      showToast('聊天记录已清除')
+    }
+  }
+
+  // 清理临时记忆
+  const handleClearTempMemory = () => {
+    if (!activePersonaId) return
+    if (confirm('确定要清理临时记忆吗？这将清除对话日志缓存。')) {
+      clearTempLogs(activePersonaId)
+      showToast('临时记忆已清理')
+    }
+  }
+
+  // 清理核心记忆
+  const handleClearCoreMemory = () => {
+    if (!activePersonaId) return
+    const memories = getCoreMemoriesByPersonaId(activePersonaId)
+    if (memories.length === 0) {
+      showToast('暂无核心记忆')
+      return
+    }
+    if (confirm(`确定要清理 ${memories.length} 条核心记忆吗？此操作不可恢复！`)) {
+      memories.forEach(m => deleteCoreMemory(m.id))
+      showToast('核心记忆已清理')
+    }
+  }
+
+  // 初始化 - 重置所有数据
+  const handleReset = () => {
+    if (confirm('⚠️ 确定要初始化吗？\n\n这将清除当前角色的所有数据：\n- 聊天记录\n- 临时记忆\n- 核心记忆\n\n此操作不可恢复！')) {
+      if (!activePersonaId) return
+      clearMessages(activePersonaId)
+      clearTempLogs(activePersonaId)
+      const memories = getCoreMemoriesByPersonaId(activePersonaId)
+      memories.forEach(m => deleteCoreMemory(m.id))
+      showToast('已初始化')
     }
   }
 
@@ -634,7 +739,10 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
         onOpenImport={() => setShowImport(true)}
         onOpenExport={() => setShowExport(true)}
         onOrganizeMemory={handleOrganizeMemory}
-        onClearMemory={handleClearMemory}
+        onClearScreen={handleClearScreen}
+        onClearTempMemory={handleClearTempMemory}
+        onClearCoreMemory={handleClearCoreMemory}
+        onReset={handleReset}
         onOpenLogs={() => setShowLogs(true)}
         onLock={onLock}
         onMenuClick={onMenuClick}
@@ -731,7 +839,7 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
                     {formatTimeDivider(message.dateTime)}
                   </div>
                 )}
-                <MessageBubble message={message} personaId={activePersonaId!} onTickle={handleTickle} />
+                <MessageBubble message={message} personaId={activePersonaId!} onTickle={handleTickle} onClearMemory={() => setShowClearMenu(true)} />
               </div>
             )
           })
@@ -743,7 +851,7 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
         onSend={handleSend} 
         onSendVoice={handleSendVoice}
         onTickle={handleTickle} 
-        disabled={loading}
+        disabled={false}
         visionEnabled={visionConfig.enabled}
       />
 
@@ -765,6 +873,193 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
 
       {/* 日志查看器 */}
       <LogViewer open={showLogs} onClose={() => setShowLogs(false)} />
+
+      {/* 清理菜单弹窗（从错误消息中打开） */}
+      {showClearMenu && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setShowClearMenu(false)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[var(--theme-chat-bg)] rounded-2xl p-5 w-[280px] shadow-xl border border-[var(--theme-border)]">
+            <h3 className="text-lg font-medium text-[var(--theme-text-primary)] mb-4 text-center">清理选项</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => { handleClearScreen(); setShowClearMenu(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[var(--theme-border)]/50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-lg">🧹</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-medium text-[var(--theme-text-primary)]">清屏</div>
+                  <div className="text-xs text-[var(--theme-text-muted)]">清除当前聊天记录</div>
+                </div>
+              </button>
+              <button
+                onClick={() => { handleClearTempMemory(); setShowClearMenu(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[var(--theme-border)]/50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
+                  <span className="text-white text-lg">📝</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-medium text-[var(--theme-text-primary)]">清理临时记忆</div>
+                  <div className="text-xs text-[var(--theme-text-muted)]">清除对话日志缓存</div>
+                </div>
+              </button>
+              <button
+                onClick={() => { handleClearCoreMemory(); setShowClearMenu(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[var(--theme-border)]/50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center">
+                  <span className="text-white text-lg">🧠</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-medium text-[var(--theme-text-primary)]">清理核心记忆</div>
+                  <div className="text-xs text-[var(--theme-text-muted)]">清除 AI 长期记忆</div>
+                </div>
+              </button>
+              <button
+                onClick={() => { handleReset(); setShowClearMenu(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center">
+                  <span className="text-white text-lg">🔄</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-medium text-red-500">初始化</div>
+                  <div className="text-xs text-[var(--theme-text-muted)]">重置所有数据</div>
+                </div>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowClearMenu(false)}
+              className="w-full mt-4 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-border)]/50 rounded-lg transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* 帮助弹窗 */}
+      {showHelp && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setShowHelp(false)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[var(--theme-chat-bg)] rounded-2xl p-5 w-[340px] max-h-[80vh] overflow-y-auto shadow-xl border border-[var(--theme-border)]">
+            <h3 className="text-lg font-medium text-[var(--theme-text-primary)] mb-4 text-center">📋 快捷指令</h3>
+            
+            {/* 清理类 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-[var(--theme-text-primary)] mb-2">🧹 清理类</h4>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/cl</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/清理临时</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 清理临时记忆</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/cls</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/清屏</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 清空对话</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/清理核心</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 清理核心记忆</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* 主动消息 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-[var(--theme-text-primary)] mb-2">💬 主动消息</h4>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/ea</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/开启主动</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 开启主动消息</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/da</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/关闭主动</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 关闭主动消息</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* 主题 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-[var(--theme-text-primary)] mb-2">🎨 主题切换</h4>
+              <div className="flex flex-wrap gap-1.5 text-xs mb-2">
+                <span className="px-2 py-0.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded font-mono">/微信</span>
+                <span className="px-2 py-0.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded font-mono">/qq</span>
+                <span className="px-2 py-0.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded font-mono">/imessage</span>
+                <span className="px-2 py-0.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded font-mono">/discord</span>
+                <span className="px-2 py-0.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded font-mono">/telegram</span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/手机模式</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/电脑模式</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* 界面 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-[var(--theme-text-primary)] mb-2">📱 界面</h4>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/set</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/设置</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 打开设置</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/p</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/人设</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 打开人设</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/log</span>
+                  <span className="text-[var(--theme-text-muted)]">或</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/日志</span>
+                  <span className="text-[var(--theme-text-secondary)]">— 查看日志</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--theme-primary)] font-mono">/导入</span>
+                  <span className="text-[var(--theme-text-muted)">/</span>
+                  <span className="text-[var(--theme-primary)] font-mono">/导出</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* 帮助 */}
+            <div className="mb-2">
+              <h4 className="text-sm font-medium text-[var(--theme-text-primary)] mb-2">❓ 帮助</h4>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[var(--theme-primary)] font-mono">/help</span>
+                <span className="text-[var(--theme-text-muted)]">或</span>
+                <span className="text-[var(--theme-primary)] font-mono">/帮助</span>
+                <span className="text-[var(--theme-text-muted)]">或</span>
+                <span className="text-[var(--theme-primary)] font-mono">/h</span>
+                <span className="text-[var(--theme-text-secondary)]">— 显示本帮助</span>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setShowHelp(false)}
+              className="w-full mt-2 py-2 text-sm bg-[var(--theme-primary)] text-white rounded-lg hover:opacity-90 transition-opacity"
+            >
+              知道了
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

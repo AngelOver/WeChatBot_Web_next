@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Settings, User, ChevronDown, ChevronLeft, Upload, Download, Brain, MoreHorizontal, FileText, Lock, HelpCircle, Eraser } from 'lucide-react'
+import { Settings, User, ChevronDown, ChevronLeft, Upload, Download, Palette, MoreHorizontal, FileText, Lock, HelpCircle, Eraser, Trash2, RotateCcw, MessageSquareX, Smartphone, Monitor, Check, Brain } from 'lucide-react'
 import { usePersonaStore } from '@/store/personaStore'
 import { useConfigStore } from '@/store/configStore'
+import { useThemeStore } from '@/store/themeStore'
+import { themes } from '@/themes'
+import { Avatar } from '@/components/common/Avatar'
 import { MODEL_OPTIONS, getModelDisplayText } from '@/lib/constants'
 
 interface ChatHeaderProps {
@@ -13,7 +16,10 @@ interface ChatHeaderProps {
   onOpenImport?: () => void
   onOpenExport?: () => void
   onOrganizeMemory?: () => void
-  onClearMemory?: () => void
+  onClearScreen?: () => void
+  onClearTempMemory?: () => void
+  onClearCoreMemory?: () => void
+  onReset?: () => void
   onOpenLogs?: () => void
   onLock?: () => void
   onMenuClick?: () => void
@@ -27,16 +33,25 @@ export function ChatHeader({
   onOpenImport,
   onOpenExport,
   onOrganizeMemory,
-  onClearMemory,
+  onClearScreen,
+  onClearTempMemory,
+  onClearCoreMemory,
+  onReset,
   onOpenLogs,
   onLock,
   onMenuClick,
   showMenuButton,
 }: ChatHeaderProps) {
   const { personas, activePersonaId } = usePersonaStore()
-  const { gptConfig } = useConfigStore()
+  const { gptConfig, userInfo } = useConfigStore()
   const [showModelSelect, setShowModelSelect] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [showClearMenu, setShowClearMenu] = useState(false)
+  const [showThemeMenu, setShowThemeMenu] = useState(false)
+  const { theme, setTheme } = useThemeStore()
+  const { phoneMode, setPhoneMode } = useConfigStore()
+
+  const hasClearOptions = onClearScreen || onClearTempMemory || onClearCoreMemory || onReset
 
   const activePersona = personas.find((p) => p.id === activePersonaId)
   const displayTitle = activePersona?.name || title
@@ -103,19 +118,17 @@ export function ChatHeader({
                   </div>
                   <span className="text-xs text-[var(--theme-text-secondary)]">设置</span>
                 </button>
-                {/* 5. 记忆 */}
-                {onOrganizeMemory && (
-                  <button onClick={() => { onOrganizeMemory(); setShowMore(false); }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-[var(--theme-border)]/50 active:bg-[var(--theme-border)]">
-                    <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center">
-                      <Brain className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-xs text-[var(--theme-text-secondary)]">记忆</span>
-                  </button>
-                )}
+                {/* 5. 主题 */}
+                <button onClick={() => { setShowThemeMenu(true); setShowMore(false); }}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-[var(--theme-border)]/50 active:bg-[var(--theme-border)]">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center">
+                    <Palette className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs text-[var(--theme-text-secondary)]">主题</span>
+                </button>
                 {/* 6. 清理 */}
-                {onClearMemory && (
-                  <button onClick={() => { onClearMemory(); setShowMore(false); }}
+                {hasClearOptions && (
+                  <button onClick={() => { setShowClearMenu(true); setShowMore(false); }}
                     className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-[var(--theme-border)]/50 active:bg-[var(--theme-border)]">
                     <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center">
                       <Eraser className="w-6 h-6 text-white" />
@@ -153,9 +166,11 @@ export function ChatHeader({
       <div className="hidden sm:flex items-center justify-between px-4 py-3">
         {/* 左侧：头像 + 标题 */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[var(--theme-radius-avatar)] bg-[var(--theme-primary)] flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
+          <Avatar 
+            name={activePersona?.name || '?'} 
+            size="lg" 
+            src={activePersona?.avatar} 
+          />
           <div>
             <h1 className="font-medium text-[var(--theme-text-primary)]">{displayTitle}</h1>
             <button onClick={onOpenPersona}
@@ -171,17 +186,17 @@ export function ChatHeader({
               <span className="text-[10px] text-[var(--theme-text-muted)]">导入</span>
             </button>
           )}
-          {onOrganizeMemory && (
-            <button onClick={onOrganizeMemory} className="flex flex-col items-center px-2 py-1 hover:bg-[var(--theme-border)]/50 rounded">
-              <Brain className="w-4 h-4 text-[var(--theme-text-secondary)]" />
-              <span className="text-[10px] text-[var(--theme-text-muted)]">记忆</span>
-            </button>
-          )}
-          {onClearMemory && (
-            <button onClick={onClearMemory} className="flex flex-col items-center px-2 py-1 hover:bg-[var(--theme-border)]/50 rounded">
-              <Eraser className="w-4 h-4 text-red-500" />
-              <span className="text-[10px] text-[var(--theme-text-muted)]">清理</span>
-            </button>
+          <button onClick={() => setShowThemeMenu(true)} className="flex flex-col items-center px-2 py-1 hover:bg-[var(--theme-border)]/50 rounded">
+            <Palette className="w-4 h-4 text-purple-500" />
+            <span className="text-[10px] text-[var(--theme-text-muted)]">主题</span>
+          </button>
+          {hasClearOptions && (
+            <div className="relative">  
+              <button onClick={() => setShowClearMenu(!showClearMenu)} className="flex flex-col items-center px-2 py-1 hover:bg-[var(--theme-border)]/50 rounded">
+                <Eraser className="w-4 h-4 text-red-500" />
+                <span className="text-[10px] text-[var(--theme-text-muted)]">清理</span>
+              </button>
+            </div>
           )}
           {onOpenLogs && (
             <button onClick={onOpenLogs} className="flex flex-col items-center px-2 py-1 hover:bg-[var(--theme-border)]/50 rounded">
@@ -231,6 +246,133 @@ export function ChatHeader({
           </button>
         </div>
       </div>
+
+      {/* 清理菜单弹窗 */}
+      {showClearMenu && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setShowClearMenu(false)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[var(--theme-chat-bg)] rounded-2xl p-5 w-[280px] shadow-xl border border-[var(--theme-border)]">
+            <h3 className="text-lg font-medium text-[var(--theme-text-primary)] mb-4 text-center">清理选项</h3>
+            <div className="space-y-2">
+              {onClearScreen && (
+                <button
+                  onClick={() => { onClearScreen(); setShowClearMenu(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[var(--theme-border)]/50 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                    <MessageSquareX className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-[var(--theme-text-primary)]">清屏</div>
+                    <div className="text-xs text-[var(--theme-text-muted)]">清除当前聊天记录</div>
+                  </div>
+                </button>
+              )}
+              {onClearTempMemory && (
+                <button
+                  onClick={() => { onClearTempMemory(); setShowClearMenu(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[var(--theme-border)]/50 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
+                    <Eraser className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-[var(--theme-text-primary)]">清理临时记忆</div>
+                    <div className="text-xs text-[var(--theme-text-muted)]">清除对话日志缓存</div>
+                  </div>
+                </button>
+              )}
+              {onClearCoreMemory && (
+                <button
+                  onClick={() => { onClearCoreMemory(); setShowClearMenu(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[var(--theme-border)]/50 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-[var(--theme-text-primary)]">清理核心记忆</div>
+                    <div className="text-xs text-[var(--theme-text-muted)]">清除 AI 长期记忆</div>
+                  </div>
+                </button>
+              )}
+              {onReset && (
+                <button
+                  onClick={() => { onReset(); setShowClearMenu(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center">
+                    <RotateCcw className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-red-500">初始化</div>
+                    <div className="text-xs text-[var(--theme-text-muted)]">重置所有数据</div>
+                  </div>
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowClearMenu(false)}
+              className="w-full mt-4 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-border)]/50 rounded-lg transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* 主题切换弹窗 */}
+      {showThemeMenu && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setShowThemeMenu(false)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[var(--theme-chat-bg)] rounded-2xl p-5 w-[320px] shadow-xl border border-[var(--theme-border)]">
+            <h3 className="text-lg font-medium text-[var(--theme-text-primary)] mb-4 text-center">主题设置</h3>
+            
+            {/* 手机模式开关 */}
+            <div className="flex items-center justify-between p-3 bg-[var(--theme-sidebar-bg)] rounded-xl mb-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-[var(--theme-primary)]" />
+                <span className="text-sm text-[var(--theme-text-primary)]">手机模式</span>
+              </div>
+              <button
+                onClick={() => setPhoneMode(!phoneMode)}
+                className={`w-12 h-6 rounded-full transition-colors ${phoneMode ? 'bg-[var(--theme-primary)]' : 'bg-[var(--theme-border)]'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${phoneMode ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+            
+            {/* 主题列表 */}
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {Object.entries(themes).map(([key, t]) => (
+                <button
+                  key={key}
+                  onClick={() => { setTheme(key); setShowThemeMenu(false); }}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                    theme.name === t.name ? 'bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]' : 'hover:bg-[var(--theme-border)]/50'
+                  }`}
+                >
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: t.colors.primary }}
+                  >
+                    <Palette className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-[var(--theme-text-primary)] flex-1 text-left">{t.name}</span>
+                  {theme.name === t.name && <Check className="w-4 h-4 text-[var(--theme-primary)]" />}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setShowThemeMenu(false)}
+              className="w-full mt-4 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-border)]/50 rounded-lg transition-colors"
+            >
+              关闭
+            </button>
+          </div>
+        </>
+      )}
     </header>
   )
 }

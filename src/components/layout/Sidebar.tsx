@@ -2,6 +2,7 @@
 
 import { Plus, Settings, Trash2, Pin, Github } from 'lucide-react'
 import { usePersonaStore } from '@/store/personaStore'
+import { useConfigStore } from '@/store/configStore'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/common/Avatar'
 
@@ -14,6 +15,7 @@ interface SidebarProps {
 
 export function Sidebar({ onSelectChat, onOpenSettings, onOpenPersona, onAddPersona }: SidebarProps) {
   const { personas, activePersonaId, setActive, deletePersona, togglePin } = usePersonaStore()
+  const { userInfo } = useConfigStore()
 
   // 排序：置顶优先，然后按最后消息时间
   const sortedPersonas = [...personas].sort((a, b) => {
