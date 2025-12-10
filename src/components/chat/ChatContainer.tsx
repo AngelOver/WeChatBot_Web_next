@@ -791,6 +791,7 @@ export function ChatContainer({ onMenuClick, showMenuButton, onLock }: ChatConta
                 <p className="ml-2">1. 点击顶部 <span className="text-orange-500 font-medium">设置</span> → 填写接口地址和密钥</p>
                 <p className="ml-2">2. 点击 <span className="text-blue-500 font-medium">＋</span> 或 <span className="text-blue-500 font-medium">人设</span> → 选择或创建 AI 角色</p>
                 <p className="ml-2">3. <span className="text-green-600 font-medium">开始对话！</span></p>
+                <p className="ml-2"><span className="text-xs text-gray-400">不会配置？</span><a href="https://ai.feishu.cn/wiki/DDh6waPHoiHd7WkvQqOclLNUn34" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline font-medium">→ 查看详细教程</a></p>
               </div>
               <div className="mt-4 pt-3 border-t border-[var(--theme-border)] flex flex-wrap justify-center gap-3 text-xs items-center">
                 <span className="text-green-600">🌐 开源项目</span>
